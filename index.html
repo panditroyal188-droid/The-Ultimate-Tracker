@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prinshu's Tracker">
+<meta name="theme-color" content="#060a12">
+<meta name="description" content="The Prinshu's personal daily tracker with live news, horoscope, tasks & water tracker.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>The Prinshu's Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root[data-theme="dark"]{--bg:#060a12;--surface:rgba(255,255,255,0.03);--surface2:rgba(255,255,255,0.07);--border:rgba(99,200,255,0.13);--text:#e8f4ff;--text2:#7a9ab8;--accent:#00d4ff;--accent2:#7b2fff;--accent3:#ff6b35;--glow:0 0 20px rgba(0,212,255,0.3);--glow2:0 0 30px rgba(123,47,255,0.2);--grid:rgba(0,212,255,0.04);--nav-bg:rgba(6,10,18,0.97);--horo-glow:0 0 30px rgba(123,47,255,0.4);}
+:root[data-theme="light"]{--bg:#f0f6ff;--surface:rgba(255,255,255,0.8);--surface2:rgba(255,255,255,0.95);--border:rgba(0,100,200,0.15);--text:#0a1a2e;--text2:#4a6a8a;--accent:#0066cc;--accent2:#6600cc;--accent3:#cc4400;--glow:0 4px 20px rgba(0,102,204,0.15);--glow2:0 4px 20px rgba(102,0,204,0.1);--grid:rgba(0,100,200,0.04);--nav-bg:rgba(240,246,255,0.97);--horo-glow:0 4px 30px rgba(102,0,204,0.2);}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;padding-bottom:80px;transition:background 0.4s,color 0.4s;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:60px 60px;z-index:0;pointer-events:none;}
+[data-theme="dark"] body::after{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 20% 20%,rgba(0,212,255,0.05) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(123,47,255,0.05) 0%,transparent 50%);z-index:0;pointer-events:none;animation:aurora 12s ease-in-out infinite alternate;}
+@keyframes aurora{0%{transform:rotate(0deg) scale(1)}100%{transform:rotate(5deg) scale(1.05)}}
+
+header{position:sticky;top:0;z-index:100;background:var(--nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:14px 18px;padding-top:max(14px,env(safe-area-inset-top));}
+.logo{font-family:'Orbitron',monospace;font-size:0.78rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:1px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.live-clock{font-family:'Orbitron',monospace;font-size:0.78rem;color:var(--accent);letter-spacing:2px;}
+.theme-toggle{background:var(--surface2);border:1px solid var(--border);border-radius:50px;padding:6px 12px;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:500;display:flex;align-items:center;gap:5px;}
+
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--nav-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:8px 0;padding-bottom:max(8px,env(safe-area-inset-bottom));}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 0;border:none;background:none;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:0.5rem;font-weight:500;letter-spacing:0.5px;}
+.nav-item.active{color:var(--accent);}
+.nav-item .nav-icon{font-size:1.2rem;}
+
+.page{display:none;position:relative;z-index:1;padding:16px;}
+.page.active{display:block;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:var(--glow2);position:relative;overflow:hidden;margin-bottom:16px;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.6;}
+.card-title{font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
+.live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+
+.save-badge{position:fixed;top:70px;right:16px;z-index:999;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:0.7rem;font-weight:600;padding:6px 14px;border-radius:20px;opacity:0;transition:opacity 0.4s;pointer-events:none;}
+.save-badge.show{opacity:1;}
+
+/* HOME */
+.date-hero{text-align:center;padding:20px 0 10px;}
+.date-big{font-family:'Orbitron',monospace;font-size:4rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+.date-sub{font-size:0.8rem;color:var(--text2);margin-top:6px;letter-spacing:1px;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:16px;text-align:center;}
+.stat-num{font-family:'Orbitron',monospace;font-size:1.8rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stat-label{font-size:0.62rem;color:var(--text2);margin-top:4px;letter-spacing:1px;}
+
+/* CALENDAR */
+.cal-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cal-month{font-family:'Orbitron',monospace;font-size:0.95rem;font-weight:600;color:var(--text);}
+.nav-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;width:34px;height:34px;cursor:pointer;color:var(--accent);font-size:1.1rem;display:flex;align-items:center;justify-content:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-day-name{text-align:center;font-size:0.6rem;font-weight:600;color:var(--text2);padding:6px 2px;}
+.cal-day{text-align:center;padding:10px 2px;border-radius:8px;font-size:0.82rem;cursor:pointer;color:var(--text2);}
+.cal-day.today{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;box-shadow:var(--glow);font-family:'Orbitron',monospace;}
+.cal-day.other-month{opacity:0.25;}
+
+/* TASKS */
+.task-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;margin-bottom:10px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:opacity 0.3s;}
+.task-item.done{opacity:0.5;}
+.task-item.done .task-text{text-decoration:line-through;color:var(--text2);}
+.task-checkbox{width:24px;height:24px;border-radius:7px;border:2px solid var(--accent);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.3s;}
+.task-item.done .task-checkbox{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;}
+.task-checkbox svg{display:none;}
+.task-item.done .task-checkbox svg{display:block;}
+.task-text{flex:1;font-size:0.88rem;line-height:1.35;}
+.task-priority{font-size:0.6rem;padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:1px;white-space:nowrap;}
+.p-high{background:rgba(255,107,53,0.15);color:var(--accent3);border:1px solid rgba(255,107,53,0.3);}
+.p-med{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.2);}
+.p-low{background:rgba(123,47,255,0.1);color:var(--accent2);border:1px solid rgba(123,47,255,0.2);}
+.task-input-row{display:flex;gap:8px;margin-top:14px;}
+.task-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;}
+.task-input:focus{border-color:var(--accent);}
+.add-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:12px;padding:12px 18px;color:#fff;cursor:pointer;font-size:1.3rem;font-weight:700;}
+.reset-tasks-btn{margin-top:10px;width:100%;padding:10px;border-radius:12px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.08);color:var(--accent3);font-family:'DM Sans',sans-serif;font-size:0.8rem;cursor:pointer;font-weight:500;}
+
+/* WATER */
+.water-center{text-align:center;}
+.water-amount{font-family:'Orbitron',monospace;font-size:3rem;font-weight:800;background:linear-gradient(135deg,#00d4ff,#0066ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.water-goal{font-size:0.8rem;color:var(--text2);margin-top:4px;}
+.bottle-wrap{display:flex;justify-content:center;margin:20px 0;}
+.bottle-outline{width:90px;height:200px;border:3px solid var(--accent);border-radius:14px 14px 18px 18px;position:relative;overflow:hidden;box-shadow:var(--glow);}
+.bottle-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,rgba(0,212,255,0.7),rgba(0,100,255,0.9));transition:height 0.8s cubic-bezier(0.34,1.56,0.64,1);border-radius:0 0 15px 15px;}
+.bottle-marks{position:absolute;inset:0;display:flex;flex-direction:column-reverse;justify-content:space-around;padding:6px;pointer-events:none;}
+.bottle-mark{width:100%;border-top:1px dashed rgba(255,255,255,0.2);}
+.water-cups{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:16px 0;}
+.cup{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 4px;text-align:center;cursor:pointer;font-size:1.1rem;}
+.cup.filled{background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(0,100,255,0.2));border-color:var(--accent);box-shadow:0 0 12px rgba(0,212,255,0.2);}
+.cup-label{font-size:0.5rem;color:var(--text2);margin-top:3px;font-weight:500;}
+.water-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+.water-btn{padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:0.88rem;font-weight:500;font-family:'DM Sans',sans-serif;}
+.water-btn.primary{background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(0,100,255,0.2));border-color:var(--accent);color:var(--accent);font-weight:600;}
+
+/* NEWS */
+.news-sources{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.source-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:0.72rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+.source-btn.active{background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(123,47,255,0.15));border-color:var(--accent);color:var(--accent);}
+.news-meta-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.news-updated{font-size:0.65rem;color:var(--text2);}
+.news-refresh-btn{font-size:0.7rem;color:var(--accent);background:none;border:1px solid var(--accent);border-radius:20px;padding:4px 12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.news-loading{text-align:center;padding:40px 20px;color:var(--text2);}
+.news-loading-spin{font-size:2rem;animation:spin 1s linear infinite;display:block;margin-bottom:10px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.affair-item{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;cursor:pointer;text-decoration:none;display:block;}
+.affair-item::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--accent),var(--accent2));}
+.affair-tag{font-size:0.6rem;font-weight:700;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.affair-source{font-size:0.58rem;color:var(--text2);font-weight:500;letter-spacing:0;}
+.affair-title{font-size:0.88rem;font-weight:500;line-height:1.45;margin-bottom:8px;color:var(--text);}
+.affair-meta{font-size:0.7rem;color:var(--text2);display:flex;align-items:center;gap:6px;}
+.affair-dot{width:5px;height:5px;border-radius:50%;background:var(--accent3);display:inline-block;flex-shrink:0;}
+.news-error{background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.25);border-radius:14px;padding:16px;text-align:center;color:var(--accent3);font-size:0.85rem;}
+
+/* HOROSCOPE */
+.sign-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.sign-btn{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 4px;text-align:center;cursor:pointer;}
+.sign-btn.selected{background:linear-gradient(135deg,rgba(123,47,255,0.25),rgba(0,212,255,0.15));border-color:var(--accent2);box-shadow:var(--horo-glow);}
+.sign-emoji{font-size:1.5rem;display:block;margin-bottom:3px;}
+.sign-name{font-size:0.5rem;color:var(--text2);font-weight:600;letter-spacing:0.5px;}
+.sign-btn.selected .sign-name{color:var(--accent2);}
+.horo-panel{display:none;}
+.horo-panel.active{display:block;}
+.horo-card{background:linear-gradient(135deg,rgba(123,47,255,0.08),rgba(0,212,255,0.05));border:1px solid rgba(123,47,255,0.25);border-radius:20px;padding:22px;margin-bottom:16px;position:relative;overflow:hidden;}
+.horo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent2),transparent);opacity:0.8;}
+.horo-top{display:flex;align-items:center;gap:16px;margin-bottom:18px;}
+.horo-sign-big{font-size:3.5rem;line-height:1;}
+.horo-sign-info h2{font-family:'Orbitron',monospace;font-size:1.1rem;font-weight:700;color:var(--text);}
+.horo-sign-info p{font-size:0.72rem;color:var(--text2);margin-top:3px;}
+.horo-date-range{font-size:0.65rem;color:var(--accent2);font-weight:600;margin-top:4px;}
+.horo-section-label{font-size:0.6rem;letter-spacing:2px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;}
+.star-rating{color:#ffd700;font-size:1rem;letter-spacing:2px;margin-bottom:8px;}
+.horo-prediction{font-size:0.9rem;line-height:1.7;color:var(--text);margin-bottom:18px;}
+.horo-meters{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.horo-meter{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;}
+.horo-meter-label{font-size:0.62rem;color:var(--text2);margin-bottom:6px;letter-spacing:1px;font-weight:600;}
+.horo-meter-bar{height:5px;border-radius:5px;background:var(--surface);overflow:hidden;}
+.horo-meter-fill{height:100%;border-radius:5px;}
+.meter-love{background:linear-gradient(90deg,#ff6b9d,#ff3366);}
+.meter-career{background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.meter-health{background:linear-gradient(90deg,#00ff88,#00cc66);}
+.meter-luck{background:linear-gradient(90deg,#ffd700,#ffaa00);}
+.horo-meter-val{font-size:0.7rem;color:var(--text2);margin-top:4px;}
+.horo-lucky{display:flex;gap:8px;flex-wrap:wrap;}
+.horo-lucky-item{background:rgba(123,47,255,0.12);border:1px solid rgba(123,47,255,0.25);border-radius:20px;padding:5px 12px;font-size:0.72rem;color:var(--accent2);font-weight:500;}
+
+/* STATS */
+.progress-label-row{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text2);margin-bottom:6px;}
+.progress-bar{height:8px;border-radius:10px;background:var(--surface);overflow:hidden;margin-bottom:16px;}
+.progress-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.progress-fill.water{background:linear-gradient(90deg,#00d4ff,#0066ff);}
+.progress-fill.overall{background:linear-gradient(90deg,var(--accent3),var(--accent));}
+</style>
+</head>
+<body>
+
+<div class="save-badge" id="save-badge">✓ Saved!</div>
+
+<header>
+  <div class="logo">The Prinshu's Tracker</div>
+  <div class="header-right">
+    <div class="live-clock" id="clock">00:00:00</div>
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="theme-icon">☀️</span><span id="theme-label">Light</span>
+    </button>
+  </div>
+</header>
+
+<!-- HOME -->
+<div id="page-home" class="page active">
+  <div class="date-hero">
+    <div class="date-big" id="date-big">--</div>
+    <div class="date-sub" id="date-sub">Loading...</div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="live-dot"></span>Today at a Glance</div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-num" id="home-tasks">0/5</div><div class="stat-label">TASKS DONE</div></div>
+      <div class="stat-box"><div class="stat-num" id="home-water">0.0L</div><div class="stat-label">WATER DRUNK</div></div>
+      <div class="stat-box"><div class="stat-num" id="home-streak">0🔥</div><div class="stat-label">DAY STREAK</div></div>
+      <div class="stat-box"><div class="stat-num" id="home-pct">0%</div><div class="stat-label">COMPLETION</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="live-dot"></span>Calendar</div>
+    <div class="cal-month-nav">
+      <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+      <div class="cal-month" id="cal-month-label"></div>
+      <button class="nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-grid" id="cal-grid">
+      <div class="cal-day-name">S</div><div class="cal-day-name">M</div><div class="cal-day-name">T</div>
+      <div class="cal-day-name">W</div><div class="cal-day-name">T</div><div class="cal-day-name">F</div><div class="cal-day-name">S</div>
+    </div>
+  </div>
+</div>
+
+<!-- TASKS -->
+<div id="page-tasks" class="page">
+  <div class="card">
+    <div class="card-title"><span class="live-dot"></span>Daily Tasks — 5 Max</div>
+    <div id="task-list"></div>
+    <div class="task-input-row">
+      <input class="task-input" id="task-input" placeholder="Add a new task..." maxlength="80">
+      <button class="add-btn" onclick="addTask()">+</button>
+    </div>
+    <button class="reset-tasks-btn" onclick="resetTasks()">↺ Reset All Tasks</button>
+  </div>
+</div>
+
+<!-- WATER -->
+<div id="page-water" class="page">
+  <div class="card">
+    <div class="card-title"><span class="live-dot"></span>Hydration Tracker — 6L Goal</div>
+    <div class="water-center">
+      <div class="water-amount" id="water-display">0.0 L</div>
+      <div class="water-goal">Daily Goal: 6 Litres</div>
+    </div>
+    <div class="bottle-wrap">
+      <div class="bottle-outline">
+        <div class="bottle-fill" id="bottle-fill" style="height:0%"></div>
+        <div class="bottle-marks"><div class="bottle-mark"></div><div class="bottle-mark"></div><div class="bottle-mark"></div><div class="bottle-mark"></div><div class="bottle-mark"></div></div>
+      </div>
+    </div>
+    <div class="water-cups" id="water-cups"></div>
+    <div class="water-actions">
+      <button class="water-btn primary" onclick="addWater(250)">+ 250 ml</button>
+      <button class="water-btn primary" onclick="addWater(500)">+ 500 ml</button>
+      <button class="water-btn primary" onclick="addWater(1000)">+ 1 Litre</button>
+      <button class="water-btn" onclick="resetWater()">↺ Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEWS -->
+<div id="page-news" class="page">
+  <div class="card">
+    <div class="card-title"><span class="live-dot"></span>Live News Feed 📡</div>
+    <div class="news-sources">
+      <button class="source-btn active" onclick="loadNews('all',this)">🌐 All</button>
+      <button class="source-btn" onclick="loadNews('hindu',this)">📰 The Hindu</button>
+      <button class="source-btn" onclick="loadNews('ht',this)">📰 Hindustan Times</button>
+      <button class="source-btn" onclick="loadNews('pib',this)">🏛️ PIB India</button>
+    </div>
+    <div class="news-meta-row">
+      <div class="news-updated" id="news-updated">Fetching latest news...</div>
+      <button class="news-refresh-btn" onclick="refreshNews()">↺ Refresh</button>
+    </div>
+    <div id="news-container">
+      <div class="news-loading"><span class="news-loading-spin">📡</span>Loading live news...</div>
+    </div>
+  </div>
+</div>
+
+<!-- HOROSCOPE -->
+<div id="page-horo" class="page">
+  <div class="card">
+    <div class="card-title"><span class="live-dot"></span>Daily Horoscope ✨</div>
+    <div style="font-size:0.75rem;color:var(--text2);margin-bottom:14px;">Tap your star sign below</div>
+    <div class="sign-selector">
+      <div class="sign-btn selected" onclick="showSign(0,this)"><span class="sign-emoji">♈</span><div class="sign-name">ARIES</div></div>
+      <div class="sign-btn" onclick="showSign(1,this)"><span class="sign-emoji">♉</span><div class="sign-name">TAURUS</div></div>
+      <div class="sign-btn" onclick="showSign(2,this)"><span class="sign-emoji">♊</span><div class="sign-name">GEMINI</div></div>
+      <div class="sign-btn" onclick="showSign(3,this)"><span class="sign-emoji">♋</span><div class="sign-name">CANCER</div></div>
+      <div class="sign-btn" onclick="showSign(4,this)"><span class="sign-emoji">♌</span><div class="sign-name">LEO</div></div>
+      <div class="sign-btn" onclick="showSign(5,this)"><span class="sign-emoji">♍</span><div class="sign-name">VIRGO</div></div>
+      <div class="sign-btn" onclick="showSign(6,this)"><span class="sign-emoji">♎</span><div class="sign-name">LIBRA</div></div>
+      <div class="sign-btn" onclick="showSign(7,this)"><span class="sign-emoji">♏</span><div class="sign-name">SCORPIO</div></div>
+      <div class="sign-btn" onclick="showSign(8,this)"><span class="sign-emoji">♐</span><div class="sign-name">SAGITT.</div></div>
+      <div class="sign-btn" onclick="showSign(9,this)"><span class="sign-emoji">♑</span><div class="sign-name">CAPRIC.</div></div>
+      <div class="sign-btn" onclick="showSign(10,this)"><span class="sign-emoji">♒</span><div class="sign-name">AQUAR.</div></div>
+      <div class="sign-btn" onclick="showSign(11,this)"><span class="sign-emoji">♓</span><div class="sign-name">PISCES</div></div>
+    </div>
+  </div>
+  <div id="horo-0" class="horo-panel active"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♈</div><div class="horo-sign-info"><h2>Aries</h2><p>Fire Sign</p><div class="horo-date-range">Mar 21 – Apr 19</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★☆</div><div class="horo-prediction">The stars align in your favour today — trust your instincts and take that bold step you have been postponing. A conversation with someone unexpected might open a door you thought was closed forever. Mars energises your drive and ambition.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:82%"></div></div><div class="horo-meter-val">82%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:90%"></div></div><div class="horo-meter-val">90%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:75%"></div></div><div class="horo-meter-val">75%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:88%"></div></div><div class="horo-meter-val">88%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 3, 17, 42</div><div class="horo-lucky-item">🎨 Crimson Red</div><div class="horo-lucky-item">📅 Tuesday</div></div></div></div>
+  <div id="horo-1" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♉</div><div class="horo-sign-info"><h2>Taurus</h2><p>Earth Sign</p><div class="horo-date-range">Apr 20 – May 20</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★★</div><div class="horo-prediction">Venus blesses your relationships with warmth and receptivity. Whether romantic or professional, a small gesture of genuine kindness will return to you in unexpected and beautiful ways. Financial matters look very promising today.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:95%"></div></div><div class="horo-meter-val">95%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:78%"></div></div><div class="horo-meter-val">78%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:85%"></div></div><div class="horo-meter-val">85%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:72%"></div></div><div class="horo-meter-val">72%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 7, 14, 29</div><div class="horo-lucky-item">🎨 Emerald Green</div><div class="horo-lucky-item">📅 Friday</div></div></div></div>
+  <div id="horo-2" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♊</div><div class="horo-sign-info"><h2>Gemini</h2><p>Air Sign</p><div class="horo-date-range">May 21 – Jun 20</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★☆☆</div><div class="horo-prediction">Mercury sharpens your intellect and communication today. An excellent moment to negotiate, present ideas, and express yourself with clarity and confidence. Your words carry extra weight — use them wisely to create lasting impressions.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:68%"></div></div><div class="horo-meter-val">68%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:92%"></div></div><div class="horo-meter-val">92%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:70%"></div></div><div class="horo-meter-val">70%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:65%"></div></div><div class="horo-meter-val">65%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 2, 11, 38</div><div class="horo-lucky-item">🎨 Royal Blue</div><div class="horo-lucky-item">📅 Wednesday</div></div></div></div>
+  <div id="horo-3" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♋</div><div class="horo-sign-info"><h2>Cancer</h2><p>Water Sign</p><div class="horo-date-range">Jun 21 – Jul 22</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★☆</div><div class="horo-prediction">The Moon stirs emotions beneath the surface. Prioritise self-reflection over hasty decisions today. Journaling or a quiet walk will help you access the inner clarity you have been searching for. Home and family bring deep comfort.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:88%"></div></div><div class="horo-meter-val">88%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:65%"></div></div><div class="horo-meter-val">65%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:80%"></div></div><div class="horo-meter-val">80%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:77%"></div></div><div class="horo-meter-val">77%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 5, 23, 47</div><div class="horo-lucky-item">🎨 Pearl White</div><div class="horo-lucky-item">📅 Monday</div></div></div></div>
+  <div id="horo-4" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♌</div><div class="horo-sign-info"><h2>Leo</h2><p>Fire Sign</p><div class="horo-date-range">Jul 23 – Aug 22</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★★</div><div class="horo-prediction">The Sun shines directly on you today! Your natural charisma is at its peak — lead boldly, inspire others, and step into the spotlight. Creative projects receive cosmic support. Love and admiration flow toward you from unexpected directions.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:91%"></div></div><div class="horo-meter-val">91%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:88%"></div></div><div class="horo-meter-val">88%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:82%"></div></div><div class="horo-meter-val">82%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:94%"></div></div><div class="horo-meter-val">94%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 8, 13, 31</div><div class="horo-lucky-item">🎨 Golden Yellow</div><div class="horo-lucky-item">📅 Sunday</div></div></div></div>
+  <div id="horo-5" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♍</div><div class="horo-sign-info"><h2>Virgo</h2><p>Earth Sign</p><div class="horo-date-range">Aug 23 – Sep 22</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★☆</div><div class="horo-prediction">Your analytical mind is at peak sharpness. Detail-oriented tasks, planning, and problem-solving bring great satisfaction today. Health routines started now will stick. A helpful opportunity comes through someone you assist generously.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:71%"></div></div><div class="horo-meter-val">71%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:93%"></div></div><div class="horo-meter-val">93%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:90%"></div></div><div class="horo-meter-val">90%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:69%"></div></div><div class="horo-meter-val">69%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 1, 19, 44</div><div class="horo-lucky-item">🎨 Emerald Green</div><div class="horo-lucky-item">📅 Wednesday</div></div></div></div>
+  <div id="horo-6" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♎</div><div class="horo-sign-info"><h2>Libra</h2><p>Air Sign</p><div class="horo-date-range">Sep 23 – Oct 22</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★☆</div><div class="horo-prediction">Venus and Jupiter align to bring harmony and abundance your way. Relationships flourish when you speak your truth with diplomacy. An important decision becomes much clearer by evening. Balance is your superpower today.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:86%"></div></div><div class="horo-meter-val">86%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:74%"></div></div><div class="horo-meter-val">74%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:78%"></div></div><div class="horo-meter-val">78%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:83%"></div></div><div class="horo-meter-val">83%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 6, 22, 36</div><div class="horo-lucky-item">🎨 Rose Gold</div><div class="horo-lucky-item">📅 Friday</div></div></div></div>
+  <div id="horo-7" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♏</div><div class="horo-sign-info"><h2>Scorpio</h2><p>Water Sign</p><div class="horo-date-range">Oct 23 – Nov 21</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★★</div><div class="horo-prediction">Pluto drives deep transformation today. Your perception cuts through deception like a laser — trust what you sense beneath the surface. Hidden information comes to light in your favour. Financial decisions made with patience bring power.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:79%"></div></div><div class="horo-meter-val">79%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:87%"></div></div><div class="horo-meter-val">87%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:73%"></div></div><div class="horo-meter-val">73%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:91%"></div></div><div class="horo-meter-val">91%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 9, 16, 33</div><div class="horo-lucky-item">🎨 Deep Purple</div><div class="horo-lucky-item">📅 Tuesday</div></div></div></div>
+  <div id="horo-8" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♐</div><div class="horo-sign-info"><h2>Sagittarius</h2><p>Fire Sign</p><div class="horo-date-range">Nov 22 – Dec 21</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★☆</div><div class="horo-prediction">Jupiter expands your horizons and invites wonderful serendipity. An opportunity involving learning, travel, or a new connection brings fresh perspective. Your optimism is contagious today — share it freely and watch doors swing wide open.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:76%"></div></div><div class="horo-meter-val">76%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:84%"></div></div><div class="horo-meter-val">84%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:88%"></div></div><div class="horo-meter-val">88%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:80%"></div></div><div class="horo-meter-val">80%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 4, 28, 51</div><div class="horo-lucky-item">🎨 Coral Orange</div><div class="horo-lucky-item">📅 Thursday</div></div></div></div>
+  <div id="horo-9" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♑</div><div class="horo-sign-info"><h2>Capricorn</h2><p>Earth Sign</p><div class="horo-date-range">Dec 22 – Jan 19</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★☆</div><div class="horo-prediction">Saturn rewards discipline and long-term thinking today. Resist shortcuts — the solid foundation you build right now will support dreams you have not yet imagined. A senior mentor brings guidance that changes your perspective significantly.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:67%"></div></div><div class="horo-meter-val">67%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:96%"></div></div><div class="horo-meter-val">96%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:83%"></div></div><div class="horo-meter-val">83%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:71%"></div></div><div class="horo-meter-val">71%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 7, 15, 41</div><div class="horo-lucky-item">🎨 Midnight Black</div><div class="horo-lucky-item">📅 Saturday</div></div></div></div>
+  <div id="horo-10" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♒</div><div class="horo-sign-info"><h2>Aquarius</h2><p>Air Sign</p><div class="horo-date-range">Jan 20 – Feb 18</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★★</div><div class="horo-prediction">Uranus sparks brilliant flashes of original thinking. Break from routine, question assumptions, and embrace the unconventional. Your most unusual idea today turns out to be your most powerful one. Community brings unexpected breakthroughs.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:74%"></div></div><div class="horo-meter-val">74%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:89%"></div></div><div class="horo-meter-val">89%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:77%"></div></div><div class="horo-meter-val">77%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:93%"></div></div><div class="horo-meter-val">93%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 3, 21, 48</div><div class="horo-lucky-item">🎨 Electric Cyan</div><div class="horo-lucky-item">📅 Saturday</div></div></div></div>
+  <div id="horo-11" class="horo-panel"><div class="horo-card"><div class="horo-top"><div class="horo-sign-big">♓</div><div class="horo-sign-info"><h2>Pisces</h2><p>Water Sign</p><div class="horo-date-range">Feb 19 – Mar 20</div></div></div><div class="horo-section-label">Today's Cosmic Reading</div><div class="star-rating">★★★★☆</div><div class="horo-prediction">Neptune heightens your intuition and creative sensitivity. Pay close attention to dreams, hunches, and subtle feelings. Artistic pursuits flow effortlessly and bring deep satisfaction. A spiritual insight guides you toward your true path today.</div><div class="horo-section-label">Energy Meters</div><div class="horo-meters"><div class="horo-meter"><div class="horo-meter-label">❤️ LOVE</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-love" style="width:90%"></div></div><div class="horo-meter-val">90%</div></div><div class="horo-meter"><div class="horo-meter-label">💼 CAREER</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-career" style="width:69%"></div></div><div class="horo-meter-val">69%</div></div><div class="horo-meter"><div class="horo-meter-label">🌿 HEALTH</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-health" style="width:86%"></div></div><div class="horo-meter-val">86%</div></div><div class="horo-meter"><div class="horo-meter-label">🍀 LUCK</div><div class="horo-meter-bar"><div class="horo-meter-fill meter-luck" style="width:75%"></div></div><div class="horo-meter-val">75%</div></div></div><div class="horo-section-label">Lucky Elements Today</div><div class="horo-lucky"><div class="horo-lucky-item">🔢 2, 10, 37</div><div class="horo-lucky-item">🎨 Lavender</div><div class="horo-lucky-item">📅 Thursday</div></div></div></div>
+</div>
+
+<!-- STATS -->
+<div id="page-stats" class="page">
+  <div class="card">
+    <div class="card-title"><span class="live-dot"></span>Your Progress</div>
+    <div class="stats-grid" style="margin-bottom:16px">
+      <div class="stat-box"><div class="stat-num" id="s-streak">0🔥</div><div class="stat-label">DAY STREAK</div></div>
+      <div class="stat-box"><div class="stat-num" id="s-done">0</div><div class="stat-label">TASKS TODAY</div></div>
+    </div>
+    <div class="progress-label-row"><span>Tasks Completed</span><span id="sp-tasks">0/5 · 0%</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="sp-task-bar" style="width:0%"></div></div>
+    <div class="progress-label-row"><span>Hydration</span><span id="sp-water">0/6L · 0%</span></div>
+    <div class="progress-bar"><div class="progress-fill water" id="sp-water-bar" style="width:0%"></div></div>
+    <div class="progress-label-row"><span>Overall Day</span><span id="sp-overall">0%</span></div>
+    <div class="progress-bar"><div class="progress-fill overall" id="sp-overall-bar" style="width:0%"></div></div>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="showPage('home',this)"><span class="nav-icon">🏠</span>HOME</button>
+  <button class="nav-item" onclick="showPage('tasks',this)"><span class="nav-icon">✅</span>TASKS</button>
+  <button class="nav-item" onclick="showPage('water',this)"><span class="nav-icon">💧</span>WATER</button>
+  <button class="nav-item" onclick="showPage('news',this)"><span class="nav-icon">📰</span>NEWS</button>
+  <button class="nav-item" onclick="showPage('horo',this)"><span class="nav-icon">🔮</span>HORO</button>
+  <button class="nav-item" onclick="showPage('stats',this)"><span class="nav-icon">📊</span>STATS</button>
+</nav>
+
+<script>
+/* ================================================================
+   STORAGE HELPERS
+================================================================ */
+function lsGet(k,fb){try{var v=localStorage.getItem(k);return v!==null?JSON.parse(v):fb;}catch(e){return fb;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+/* ================================================================
+   DATA MIGRATION — move old keys (pt_*) to new keys safely
+================================================================ */
+(function migrate(){
+  // If old data exists from previous ZIP version, keep it
+  var oldTasks = lsGet('pt_tasks', null);
+  var oldWater = lsGet('pt_water', null);
+  var oldDate  = lsGet('pt_date',  null);
+  var oldStreak= lsGet('pt_streak',null);
+  var oldSign  = lsGet('pt_sign',  null);
+  var oldTheme = lsGet('pt_theme', null);
+  // Keys stay the same — data is fully preserved automatically
+  // This function exists to log migration success for debugging
+  if(oldTasks !== null) console.log('✅ Previous task data loaded:', oldTasks.length, 'tasks');
+  if(oldWater !== null) console.log('✅ Previous water data loaded:', oldWater, 'ml');
+})();
+
+/* ================================================================
+   DAILY RESET
+================================================================ */
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function checkDailyReset(){
+  var saved=lsGet('pt_date',''), today=todayStr();
+  if(saved!==today){
+    lsSet('pt_date',today);
+    lsSet('pt_water',0);
+    var tasks=lsGet('pt_tasks',null);
+    if(tasks){for(var i=0;i<tasks.length;i++)tasks[i].done=false;lsSet('pt_tasks',tasks);}
+    var last=lsGet('pt_last_active',''), streak=lsGet('pt_streak',0);
+    var yest=new Date();yest.setDate(yest.getDate()-1);
+    var yStr=yest.getFullYear()+'-'+(yest.getMonth()+1)+'-'+yest.getDate();
+    streak=(last===yStr)?streak+1:1;
+    lsSet('pt_streak',streak);lsSet('pt_last_active',today);
+  }
+}
+checkDailyReset();
+
+/* ================================================================
+   SAVE BADGE
+================================================================ */
+var _bt=null;
+function showSaved(){var b=document.getElementById('save-badge');b.classList.add('show');if(_bt)clearTimeout(_bt);_bt=setTimeout(function(){b.classList.remove('show');},1500);}
+
+/* ================================================================
+   PAGE NAV
+================================================================ */
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='news') refreshNews();
+}
+
+/* ================================================================
+   CLOCK
+================================================================ */
+function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});}
+updateClock();setInterval(updateClock,1000);
+
+/* ================================================================
+   DATE HERO
+================================================================ */
+(function(){
+  var now=new Date();
+  document.getElementById('date-big').textContent=now.getDate();
+  document.getElementById('date-sub').textContent=now.toLocaleDateString('en-US',{weekday:'long',month:'long',year:'numeric'}).toUpperCase();
+})();
+
+/* ================================================================
+   THEME
+================================================================ */
+(function(){
+  var t=lsGet('pt_theme','dark');
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('theme-icon').textContent=t==='dark'?'☀️':'🌙';
+  document.getElementById('theme-label').textContent=t==='dark'?'Light':'Dark';
+})();
+function toggleTheme(){
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  var next=isDark?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  document.getElementById('theme-icon').textContent=isDark?'🌙':'☀️';
+  document.getElementById('theme-label').textContent=isDark?'Dark':'Light';
+  lsSet('pt_theme',next);
+}
+
+/* ================================================================
+   CALENDAR
+================================================================ */
+var currentDate=new Date();
+function renderCalendar(){
+  var year=currentDate.getFullYear(),month=currentDate.getMonth();
+  var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent=months[month]+' '+year;
+  var grid=document.getElementById('cal-grid');
+  while(grid.children.length>7)grid.removeChild(grid.lastChild);
+  var firstDay=new Date(year,month,1).getDay();
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var daysInPrev=new Date(year,month,0).getDate();
+  var today=new Date();
+  for(var i=0;i<firstDay;i++){var d=document.createElement('div');d.className='cal-day other-month';d.textContent=daysInPrev-firstDay+1+i;grid.appendChild(d);}
+  for(var d2=1;d2<=daysInMonth;d2++){var el=document.createElement('div');el.className='cal-day';el.textContent=d2;if(d2===today.getDate()&&month===today.getMonth()&&year===today.getFullYear())el.classList.add('today');grid.appendChild(el);}
+  var next=1;while(grid.children.length<49){var d3=document.createElement('div');d3.className='cal-day other-month';d3.textContent=next++;grid.appendChild(d3);if(grid.children.length>=42&&next>7)break;}
+}
+function changeMonth(dir){currentDate.setMonth(currentDate.getMonth()+dir);renderCalendar();}
+renderCalendar();
+
+/* ================================================================
+   TASKS
+================================================================ */
+var DEFAULT_TASKS=[
+  {text:'Morning meditation & journaling',priority:'high',done:false},
+  {text:'Review emails & reply to urgent ones',priority:'high',done:false},
+  {text:'Team standup meeting',priority:'med',done:false},
+  {text:'Complete project deliverables',priority:'med',done:false},
+  {text:'Read 30 mins before bed',priority:'low',done:false}
+];
+var tasks=lsGet('pt_tasks',DEFAULT_TASKS);
+function saveTasks(){lsSet('pt_tasks',tasks);showSaved();}
+function renderTasks(){
+  var list=document.getElementById('task-list');list.innerHTML='';
+  for(var i=0;i<Math.min(tasks.length,5);i++){
+    (function(idx){
+      var t=tasks[idx];
+      var el=document.createElement('div');
+      el.className='task-item'+(t.done?' done':'');
+      el.innerHTML='<div class="task-checkbox"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><polyline points="1,5 5,9 11,1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="task-text">'+t.text+'</div><div class="task-priority p-'+t.priority+'">'+t.priority.toUpperCase()+'</div>';
+      el.onclick=function(){tasks[idx].done=!tasks[idx].done;saveTasks();renderTasks();updateStats();};
+      list.appendChild(el);
+    })(i);
+  }
+  updateStats();
+}
+function addTask(){
+  var input=document.getElementById('task-input');
+  var text=input.value.trim();if(!text)return;
+  if(tasks.length>=5)tasks.shift();
+  tasks.push({text:text,priority:'med',done:false});
+  input.value='';saveTasks();renderTasks();
+}
+function resetTasks(){
+  if(confirm('Reset all tasks to default?')){
+    tasks=JSON.parse(JSON.stringify(DEFAULT_TASKS));
+    saveTasks();renderTasks();
+  }
+}
+document.getElementById('task-input').addEventListener('keydown',function(e){if(e.key==='Enter')addTask();});
+renderTasks();
+
+/* ================================================================
+   WATER
+================================================================ */
+var GOAL=6000,CUP=250,CUPS=12;
+var waterMl=lsGet('pt_water',0);
+function saveWater(){lsSet('pt_water',waterMl);showSaved();}
+function renderWaterCups(){
+  var wrap=document.getElementById('water-cups');wrap.innerHTML='';
+  var filled=Math.floor(waterMl/CUP);
+  for(var i=0;i<CUPS;i++){
+    (function(idx){
+      var el=document.createElement('div');
+      el.className='cup'+(idx<filled?' filled':'');
+      el.innerHTML='💧<div class="cup-label">'+(idx+1)+'</div>';
+      el.onclick=function(){waterMl=(idx+1)*CUP;saveWater();updateWater();};
+      wrap.appendChild(el);
+    })(i);
+  }
+}
+function updateWater(){
+  waterMl=Math.min(waterMl,GOAL);
+  var liters=(waterMl/1000).toFixed(1);
+  document.getElementById('water-display').textContent=liters+' L';
+  var pct=Math.min((waterMl/GOAL)*100,100);
+  document.getElementById('bottle-fill').style.height=pct+'%';
+  renderWaterCups();updateStats();
+}
+function addWater(ml){waterMl=Math.min(waterMl+ml,GOAL);saveWater();updateWater();}
+function resetWater(){waterMl=0;saveWater();updateWater();}
+renderWaterCups();updateWater();
+
+/* ================================================================
+   STATS
+================================================================ */
+function updateStats(){
+  var done=0;for(var i=0;i<tasks.length;i++)if(tasks[i].done)done++;
+  var total=Math.min(tasks.length,5);
+  var taskPct=total?Math.round((done/total)*100):0;
+  var waterPct=Math.round(Math.min((waterMl/GOAL)*100,100));
+  var overall=Math.round((taskPct+waterPct)/2);
+  var liters=(waterMl/1000).toFixed(1);
+  var streak=lsGet('pt_streak',1);
+  document.getElementById('home-tasks').textContent=done+'/'+total;
+  document.getElementById('home-water').textContent=liters+'L';
+  document.getElementById('home-streak').textContent=streak+'🔥';
+  document.getElementById('home-pct').textContent=overall+'%';
+  document.getElementById('s-streak').textContent=streak+'🔥';
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('sp-tasks').textContent=done+'/'+total+' · '+taskPct+'%';
+  document.getElementById('sp-task-bar').style.width=taskPct+'%';
+  document.getElementById('sp-water').textContent=liters+'/6L · '+waterPct+'%';
+  document.getElementById('sp-water-bar').style.width=waterPct+'%';
+  document.getElementById('sp-overall').textContent=overall+'%';
+  document.getElementById('sp-overall-bar').style.width=overall+'%';
+}
+
+/* ================================================================
+   LIVE NEWS — RSS feeds via rss2json API (free, no key needed)
+================================================================ */
+var NEWS_SOURCES = {
+  hindu: {
+    label: 'The Hindu',
+    emoji: '🔵',
+    feeds: [
+      'https://www.thehindu.com/news/national/feeder/default.rss',
+      'https://www.thehindu.com/news/international/feeder/default.rss'
+    ]
+  },
+  ht: {
+    label: 'Hindustan Times',
+    emoji: '🟠',
+    feeds: [
+      'https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml',
+      'https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml'
+    ]
+  },
+  pib: {
+    label: 'PIB India',
+    emoji: '🟢',
+    feeds: [
+      'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3'
+    ]
+  }
+};
+
+var RSS_PROXY = 'https://api.rss2json.com/v1/api.json?rss_url=';
+var currentSource = 'all';
+var newsCache = {};
+var newsLastFetch = 0;
+var isFetching = false;
+
+function timeAgo(dateStr) {
+  try {
+    var diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+    if(diff < 1) return 'Just now';
+    if(diff < 60) return diff + ' min ago';
+    if(diff < 1440) return Math.floor(diff/60) + ' hr ago';
+    return Math.floor(diff/1440) + ' days ago';
+  } catch(e) { return 'Recently'; }
+}
+
+function renderNewsItems(items, sourceName, sourceEmoji) {
+  var html = '';
+  items.slice(0, 6).forEach(function(item) {
+    var title = item.title || 'No title';
+    var link  = item.link  || '#';
+    var date  = item.pubDate || '';
+    html += '<a class="affair-item" href="' + link + '" target="_blank" rel="noopener">'
+      + '<div class="affair-tag">' + sourceEmoji + ' ' + sourceName
+      + '<span class="affair-source">' + timeAgo(date) + '</span></div>'
+      + '<div class="affair-title">' + title + '</div>'
+      + '<div class="affair-meta"><span class="affair-dot"></span>Tap to read full article</div>'
+      + '</a>';
+  });
+  return html;
+}
+
+function fetchFeed(url) {
+  return fetch(RSS_PROXY + encodeURIComponent(url) + '&count=6')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ return (d.status === 'ok') ? d.items : []; })
+    .catch(function(){ return []; });
+}
+
+function refreshNews() {
+  if(isFetching) return;
+  isFetching = true;
+  var container = document.getElementById('news-container');
+  var now = Date.now();
+
+  // Check cache (10 min)
+  if(newsCache[currentSource] && (now - newsLastFetch) < 600000) {
+    container.innerHTML = newsCache[currentSource];
+    document.getElementById('news-updated').textContent = 'Updated just now · Tap article to read';
+    isFetching = false;
+    return;
+  }
+
+  container.innerHTML = '<div class="news-loading"><span class="news-loading-spin">📡</span>Fetching live news from ' + (currentSource === 'all' ? 'all sources' : NEWS_SOURCES[currentSource].label) + '...</div>';
+  document.getElementById('news-updated').textContent = 'Fetching...';
+
+  var promises = [];
+  var sourceKeys = currentSource === 'all' ? ['hindu','ht','pib'] : [currentSource];
+
+  sourceKeys.forEach(function(key) {
+    var src = NEWS_SOURCES[key];
+    src.feeds.forEach(function(feedUrl) {
+      promises.push(
+        fetchFeed(feedUrl).then(function(items) {
+          return { items: items, label: src.label, emoji: src.emoji };
+        })
+      );
+    });
+  });
+
+  Promise.all(promises).then(function(results) {
+    var html = '';
+    var totalItems = 0;
+
+    // Merge & sort all items by date if "all" mode
+    if(currentSource === 'all') {
+      var allItems = [];
+      results.forEach(function(r) {
+        r.items.forEach(function(item) {
+          allItems.push({ item: item, label: r.label, emoji: r.emoji });
+        });
+      });
+      // Sort by date desc
+      allItems.sort(function(a,b){
+        return new Date(b.item.pubDate||0) - new Date(a.item.pubDate||0);
+      });
+      allItems.slice(0,12).forEach(function(obj) {
+        var item = obj.item;
+        html += '<a class="affair-item" href="'+(item.link||'#')+'" target="_blank" rel="noopener">'
+          + '<div class="affair-tag">' + obj.emoji + ' ' + obj.label
+          + '<span class="affair-source">'+timeAgo(item.pubDate)+'</span></div>'
+          + '<div class="affair-title">'+(item.title||'')+'</div>'
+          + '<div class="affair-meta"><span class="affair-dot"></span>Tap to read full article</div>'
+          + '</a>';
+        totalItems++;
+      });
+    } else {
+      results.forEach(function(r) {
+        html += renderNewsItems(r.items, r.label, r.emoji);
+        totalItems += Math.min(r.items.length, 6);
+      });
+    }
+
+    if(totalItems === 0) {
+      html = '<div class="news-error">⚠️ Could not load news right now.<br><br>Check your internet connection and try again.<br><br><small>Note: Some news sources may block requests. Try a different source filter above.</small></div>';
+    }
+
+    newsCache[currentSource] = html;
+    newsLastFetch = Date.now();
+    container.innerHTML = html;
+
+    var t = new Date();
+    document.getElementById('news-updated').textContent =
+      'Updated ' + t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) + ' · ' + totalItems + ' articles';
+    isFetching = false;
+
+  }).catch(function() {
+    container.innerHTML = '<div class="news-error">⚠️ Network error. Please check your internet and tap Refresh.</div>';
+    document.getElementById('news-updated').textContent = 'Failed to load';
+    isFetching = false;
+  });
+}
+
+function loadNews(source, btnEl) {
+  currentSource = source;
+  newsCache = {}; // clear cache on source change
+  document.querySelectorAll('.source-btn').forEach(function(b){ b.classList.remove('active'); });
+  btnEl.classList.add('active');
+  refreshNews();
+}
+
+// Auto refresh news every 15 minutes
+setInterval(function(){
+  newsCache = {};
+  if(document.getElementById('page-news').classList.contains('active')) refreshNews();
+}, 900000);
+
+/* ================================================================
+   HOROSCOPE
+================================================================ */
+function showSign(idx,btnEl){
+  document.querySelectorAll('.sign-btn').forEach(function(b){b.classList.remove('selected');});
+  btnEl.classList.add('selected');
+  document.querySelectorAll('.horo-panel').forEach(function(p){p.classList.remove('active');});
+  var panel=document.getElementById('horo-'+idx);if(panel)panel.classList.add('active');
+  lsSet('pt_sign',idx);
+}
+(function(){
+  var saved=lsGet('pt_sign',0);
+  var btns=document.querySelectorAll('.sign-btn');
+  if(btns[saved]){btns.forEach(function(b){b.classList.remove('selected');});btns[saved].classList.add('selected');}
+  document.querySelectorAll('.horo-panel').forEach(function(p){p.classList.remove('active');});
+  var panel=document.getElementById('horo-'+saved);if(panel)panel.classList.add('active');
+})();
+
+/* ================================================================
+   SERVICE WORKER
+================================================================ */
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
+</script>
+</body>
+</html>
