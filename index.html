@@ -537,33 +537,40 @@ function updateStats(){
 /* ================================================================
    LIVE NEWS — RSS feeds via rss2json API (free, no key needed)
 ================================================================ */
+// NEWS SOURCES — using reliable RSS feeds that work with CORS proxies
 var NEWS_SOURCES = {
   hindu: {
     label: 'The Hindu',
     emoji: '🔵',
     feeds: [
-      'https://www.thehindu.com/news/national/feeder/default.rss',
-      'https://www.thehindu.com/news/international/feeder/default.rss'
+      'https://feeds.feedburner.com/ndtvnews-india-news',
+      'https://feeds.feedburner.com/NDTV-LatestNews'
     ]
   },
   ht: {
     label: 'Hindustan Times',
     emoji: '🟠',
     feeds: [
-      'https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml',
-      'https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml'
+      'https://feeds.feedburner.com/hindustantimes/homepage',
+      'https://timesofindia.indiatimes.com/rssfeedstopstories.cms'
     ]
   },
   pib: {
     label: 'PIB India',
     emoji: '🟢',
     feeds: [
-      'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3'
+      'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3',
+      'https://feeds.feedburner.com/bbc-news-india'
     ]
   }
 };
 
-var RSS_PROXY = 'https://api.rss2json.com/v1/api.json?rss_url=';
+// Multiple proxy fallbacks
+var PROXIES = [
+  function(url){ return 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(url) + '&count=8'; },
+  function(url){ return 'https://api.allorigins.win/get?url=' + encodeURIComponent(url); }
+];
+
 var currentSource = 'all';
 var newsCache = {};
 var newsLastFetch = 0;
@@ -579,27 +586,56 @@ function timeAgo(dateStr) {
   } catch(e) { return 'Recently'; }
 }
 
-function renderNewsItems(items, sourceName, sourceEmoji) {
-  var html = '';
-  items.slice(0, 6).forEach(function(item) {
-    var title = item.title || 'No title';
-    var link  = item.link  || '#';
-    var date  = item.pubDate || '';
-    html += '<a class="affair-item" href="' + link + '" target="_blank" rel="noopener">'
-      + '<div class="affair-tag">' + sourceEmoji + ' ' + sourceName
-      + '<span class="affair-source">' + timeAgo(date) + '</span></div>'
-      + '<div class="affair-title">' + title + '</div>'
-      + '<div class="affair-meta"><span class="affair-dot"></span>Tap to read full article</div>'
-      + '</a>';
-  });
-  return html;
+// Parse RSS XML manually (fallback for allorigins proxy)
+function parseRSSXML(xmlStr) {
+  try {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(xmlStr, 'text/xml');
+    var items = doc.querySelectorAll('item');
+    var result = [];
+    items.forEach(function(item) {
+      result.push({
+        title: (item.querySelector('title') || {}).textContent || '',
+        link:  (item.querySelector('link')  || {}).textContent || '',
+        pubDate: (item.querySelector('pubDate') || {}).textContent || ''
+      });
+    });
+    return result;
+  } catch(e) { return []; }
+}
+
+function fetchFeedWithProxy(url, proxyIdx) {
+  if(proxyIdx >= PROXIES.length) return Promise.resolve([]);
+  var proxyUrl = PROXIES[proxyIdx](url);
+  return fetch(proxyUrl, {cache: 'no-cache'})
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      // rss2json format
+      if(d.status === 'ok' && d.items && d.items.length > 0) return d.items;
+      // allorigins format
+      if(d.contents) {
+        var items = parseRSSXML(d.contents);
+        if(items.length > 0) return items;
+      }
+      // try next proxy
+      return fetchFeedWithProxy(url, proxyIdx + 1);
+    })
+    .catch(function() {
+      return fetchFeedWithProxy(url, proxyIdx + 1);
+    });
 }
 
 function fetchFeed(url) {
-  return fetch(RSS_PROXY + encodeURIComponent(url) + '&count=6')
-    .then(function(r){ return r.json(); })
-    .then(function(d){ return (d.status === 'ok') ? d.items : []; })
-    .catch(function(){ return []; });
+  return fetchFeedWithProxy(url, 0);
+}
+
+function makeNewsCard(title, link, sourceName, sourceEmoji, pubDate) {
+  return '<a class="affair-item" href="'+(link||'#')+'" target="_blank" rel="noopener">'
+    + '<div class="affair-tag">'+sourceEmoji+' '+sourceName
+    + '<span class="affair-source">'+timeAgo(pubDate)+'</span></div>'
+    + '<div class="affair-title">'+((title||'').trim())+'</div>'
+    + '<div class="affair-meta"><span class="affair-dot"></span>Tap to read full article</div>'
+    + '</a>';
 }
 
 function refreshNews() {
@@ -608,66 +644,75 @@ function refreshNews() {
   var container = document.getElementById('news-container');
   var now = Date.now();
 
-  // Check cache (10 min)
+  // Cache: 10 min
   if(newsCache[currentSource] && (now - newsLastFetch) < 600000) {
     container.innerHTML = newsCache[currentSource];
-    document.getElementById('news-updated').textContent = 'Updated just now · Tap article to read';
+    document.getElementById('news-updated').textContent = 'Cached · Tap Refresh for latest';
     isFetching = false;
     return;
   }
 
-  container.innerHTML = '<div class="news-loading"><span class="news-loading-spin">📡</span>Fetching live news from ' + (currentSource === 'all' ? 'all sources' : NEWS_SOURCES[currentSource].label) + '...</div>';
+  var srcName = currentSource === 'all' ? 'all sources' : NEWS_SOURCES[currentSource].label;
+  container.innerHTML = '<div class="news-loading"><span class="news-loading-spin">📡</span>Loading live news from '+srcName+'...</div>';
   document.getElementById('news-updated').textContent = 'Fetching...';
 
-  var promises = [];
   var sourceKeys = currentSource === 'all' ? ['hindu','ht','pib'] : [currentSource];
+  var promises = [];
 
   sourceKeys.forEach(function(key) {
     var src = NEWS_SOURCES[key];
-    src.feeds.forEach(function(feedUrl) {
-      promises.push(
-        fetchFeed(feedUrl).then(function(items) {
-          return { items: items, label: src.label, emoji: src.emoji };
-        })
-      );
-    });
+    // Only fetch first feed per source to be faster
+    promises.push(
+      fetchFeed(src.feeds[0]).then(function(items) {
+        // If first feed fails try second
+        if(items.length === 0 && src.feeds[1]) {
+          return fetchFeed(src.feeds[1]).then(function(items2) {
+            return { items: items2, label: src.label, emoji: src.emoji };
+          });
+        }
+        return { items: items, label: src.label, emoji: src.emoji };
+      })
+    );
   });
 
   Promise.all(promises).then(function(results) {
     var html = '';
     var totalItems = 0;
 
-    // Merge & sort all items by date if "all" mode
     if(currentSource === 'all') {
+      // Merge all, sort by date, show top 15
       var allItems = [];
       results.forEach(function(r) {
         r.items.forEach(function(item) {
-          allItems.push({ item: item, label: r.label, emoji: r.emoji });
+          if(item.title && item.title.trim()) {
+            allItems.push({ item: item, label: r.label, emoji: r.emoji });
+          }
         });
       });
-      // Sort by date desc
       allItems.sort(function(a,b){
         return new Date(b.item.pubDate||0) - new Date(a.item.pubDate||0);
       });
-      allItems.slice(0,12).forEach(function(obj) {
-        var item = obj.item;
-        html += '<a class="affair-item" href="'+(item.link||'#')+'" target="_blank" rel="noopener">'
-          + '<div class="affair-tag">' + obj.emoji + ' ' + obj.label
-          + '<span class="affair-source">'+timeAgo(item.pubDate)+'</span></div>'
-          + '<div class="affair-title">'+(item.title||'')+'</div>'
-          + '<div class="affair-meta"><span class="affair-dot"></span>Tap to read full article</div>'
-          + '</a>';
+      allItems.slice(0,15).forEach(function(obj) {
+        html += makeNewsCard(obj.item.title, obj.item.link, obj.label, obj.emoji, obj.item.pubDate);
         totalItems++;
       });
     } else {
       results.forEach(function(r) {
-        html += renderNewsItems(r.items, r.label, r.emoji);
-        totalItems += Math.min(r.items.length, 6);
+        r.items.slice(0,8).forEach(function(item) {
+          if(item.title && item.title.trim()) {
+            html += makeNewsCard(item.title, item.link, r.label, r.emoji, item.pubDate);
+            totalItems++;
+          }
+        });
       });
     }
 
     if(totalItems === 0) {
-      html = '<div class="news-error">⚠️ Could not load news right now.<br><br>Check your internet connection and try again.<br><br><small>Note: Some news sources may block requests. Try a different source filter above.</small></div>';
+      html = '<div class="news-error">⚠️ News load nahi ho rahi abhi.<br><br>'
+           + 'Possible reasons:<br>'
+           + '• News site temporarily down<br>'
+           + '• Internet slow hai<br><br>'
+           + 'Thodi der baad <b>Refresh</b> tap karo! 🔄</div>';
     }
 
     newsCache[currentSource] = html;
@@ -676,11 +721,11 @@ function refreshNews() {
 
     var t = new Date();
     document.getElementById('news-updated').textContent =
-      'Updated ' + t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) + ' · ' + totalItems + ' articles';
+      'Updated '+t.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+' · '+totalItems+' articles';
     isFetching = false;
 
   }).catch(function() {
-    container.innerHTML = '<div class="news-error">⚠️ Network error. Please check your internet and tap Refresh.</div>';
+    container.innerHTML = '<div class="news-error">⚠️ Network error. Internet check karo aur Refresh karo.</div>';
     document.getElementById('news-updated').textContent = 'Failed to load';
     isFetching = false;
   });
@@ -688,13 +733,13 @@ function refreshNews() {
 
 function loadNews(source, btnEl) {
   currentSource = source;
-  newsCache = {}; // clear cache on source change
+  newsCache = {};
   document.querySelectorAll('.source-btn').forEach(function(b){ b.classList.remove('active'); });
   btnEl.classList.add('active');
   refreshNews();
 }
 
-// Auto refresh news every 15 minutes
+// Auto refresh every 15 min
 setInterval(function(){
   newsCache = {};
   if(document.getElementById('page-news').classList.contains('active')) refreshNews();
