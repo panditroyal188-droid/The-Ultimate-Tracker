@@ -185,27 +185,15 @@ header{position:sticky;top:0;z-index:100;background:var(--nav-bg);backdrop-filte
 .study-status-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);border-radius:20px;padding:5px 12px;font-size:0.7rem;color:#a855f7;font-weight:600;margin-bottom:14px;}
 .study-status-dot{width:6px;height:6px;border-radius:50%;background:#a855f7;animation:pulse 1.5s infinite;}
 </style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-<div class="save-badge" id="save-badge">✓ Saved!</div>
 
-<header>
-  <div class="logo">The Prinshu's Tracker</div>
-  <div class="header-right">
-    <div class="live-clock" id="clock">00:00:00</div>
-    <button class="theme-toggle" onclick="toggleTheme()">
-      <span id="theme-icon">☀️</span><span id="theme-label">Light</span>
-    </button>
-  </div>
-</header>
-
-<!-- HOME -->
-<div id="page-home" class="page active">
-  <div class="date-hero">
-    <div class="date-big" id="date-big">--</div>
-    <div class="date-sub" id="date-sub">Loading...</div>
-  </div>
-  <div class="card">
-    <div class="card-title"><span class="live-dot"></span>Today at a Glance</div>
-  
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" style="position:fixed;inset:0;z-index:9999;background:#060a12;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
+  <div style="font-family:'Orbitron',monospace;font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,#00d4ff,#7b2fff);-webkit-background-clip:text;-webki
